@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 
 import { createLogger, type LogLevel } from "@/lib/log";
@@ -96,6 +96,29 @@ describe("apiRoute", () => {
     expect(lines[0]?.level).toBe("error");
     expect(lines[0]?.line).toContain("42501");
     expect(lines[0]?.line).not.toContain("draft-sentinel");
+  });
+
+  it("reports unexpected errors to Sentry with the route and request id (PR 4.4)", async () => {
+    const report = vi.fn();
+    const error = new Error("boom");
+    const handler = apiRoute("venues.search", () => Promise.reject(error), capture().logger, report);
+
+    const res = await call(handler);
+
+    expect(report).toHaveBeenCalledTimes(1);
+    expect(report).toHaveBeenCalledWith(error, {
+      route: "venues.search",
+      requestId: res.headers.get(REQUEST_ID_HEADER),
+    });
+  });
+
+  it("doesn't report expected outcomes such as 400, 404 or 429 (PR 4.4)", async () => {
+    const report = vi.fn();
+    for (const code of ["invalid_request", "not_found", "rate_limited"] as const) {
+      const handler = apiRoute("venues.search", () => Promise.reject(new ApiError(code)), capture().logger, report);
+      await call(handler);
+    }
+    expect(report).not.toHaveBeenCalled();
   });
 
   it("passes through responses with immutable headers, such as redirects (review finding on #23)", async () => {

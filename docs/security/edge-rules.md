@@ -121,5 +121,5 @@ robots.txt is advisory (spec §6). The limits above apply to crawlers like anyon
 
 ## Not covered here
 
-- Alerts on 429 rates and enumeration patterns are ticket 4.4.
+- Alerts on 429 rates and enumeration patterns: see [`monitoring.md`](monitoring.md) (ticket 4.4). It also proposes one more rule, for the Sentry tunnel (`POST /monitoring`).
 - Caching the sitemap at the edge is a possible later step if crawl load ever matters.

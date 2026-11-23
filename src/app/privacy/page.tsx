@@ -89,6 +89,13 @@ export default function PrivacyPage() {
             automated copying. [Retention period to confirm.]
           </li>
           <li>
+            <strong>Error reports (Sentry).</strong> When something on the site breaks, a report of the error goes to
+            Sentry so we can fix it: what failed, the page&rsquo;s address without its search details, and your browser
+            and device type. Reports are sent through our own site, so Sentry doesn&rsquo;t receive your internet
+            address, and we remove locations, cookies and anything typed before they leave. [Retention period to
+            confirm.]
+          </li>
+          <li>
             <strong>Maps (Mapbox).</strong> Your browser loads the map directly from Mapbox, which receives your
             internet address and the map area shown. The map may keep copies of map images in your browser&rsquo;s
             cache.

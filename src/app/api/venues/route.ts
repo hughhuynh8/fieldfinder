@@ -1,13 +1,18 @@
+import { createEnumerationDetector } from "@/features/search/enumeration";
 import { canonicalQueryString, parseSearchQuery } from "@/features/search/query";
 import { CANONICAL_REDIRECT_CACHE_CONTROL, SEARCH_CACHE_CONTROL, searchVenues } from "@/features/search/search";
 import { ApiError } from "@/lib/api/errors";
 import { apiRoute } from "@/lib/api/handler";
 import { publicDb } from "@/lib/db/public";
 import { searchCursorSecret } from "@/lib/env";
+import { clientIp } from "@/lib/rate-limit/client-ip";
 
 // GET /api/venues — bounded public venue search (spec §5, PR 2.7).
 // Query: lat, lng (required); radiusKm 1–50 (default 10); surface, pitchSize, lighting (yes|no),
 // access, amenities (comma-separated); limit 1–30 (default 20); cursor (from the previous page).
+
+// One detector per server instance (PR 4.4): counts distinct search tiles per client, in memory only.
+const enumeration = createEnumerationDetector({ secret: searchCursorSecret });
 
 export const GET = apiRoute("venues.search", async (request) => {
   const url = new URL(request.url);
@@ -30,6 +35,7 @@ export const GET = apiRoute("venues.search", async (request) => {
     });
   }
 
+  enumeration.record(clientIp(request), parsed.query.lat, parsed.query.lng);
   const body = await searchVenues(publicDb(), parsed.query, searchCursorSecret());
   return Response.json(body, { headers: { "cache-control": SEARCH_CACHE_CONTROL } });
 });

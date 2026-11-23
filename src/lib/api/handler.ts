@@ -3,6 +3,7 @@ import "server-only";
 import { type z } from "zod";
 
 import { log as defaultLogger, type Logger } from "@/lib/log";
+import { reportException, type ExceptionReporter } from "@/lib/observability/report";
 
 import { ApiError, errorResponse, REQUEST_ID_HEADER } from "./errors";
 import type { Operation } from "./operations";
@@ -18,12 +19,14 @@ type RouteHandler<Params> = (request: Request, context: { params: Promise<Params
 /**
  * Wraps a route handler: assigns a request id, logs one line per request (route name and method,
  * never the URL, which can carry coordinates) and turns failures into `{ code, message, requestId }`.
- * `ApiError`s keep their code and public message; anything else becomes a generic 500.
+ * `ApiError`s keep their code and public message; anything else becomes a generic 500 and is
+ * reported to Sentry (scrubbed, tagged with the route and request id).
  */
 export function apiRoute<Params = Record<string, never>>(
   route: Operation,
   handler: (request: Request, context: ApiContext<Params>) => Promise<Response>,
   logger: Logger = defaultLogger,
+  reportError: ExceptionReporter = reportException,
 ): RouteHandler<Params> {
   return async (request, { params }) => {
     const requestId = newRequestId();
@@ -44,6 +47,8 @@ export function apiRoute<Params = Record<string, never>>(
         return errorResponse(error.code, requestId, { message: error.publicMessage, headers: error.headers });
       }
       logger.error("api.unhandled_error", { ...base, status: 500, durationMs: elapsed(), error });
+      // Sentry (PR 4.4): only unexpected failures. ApiErrors (400s, 404s, 429s) are expected outcomes.
+      reportError(error, { route, requestId });
       return errorResponse("internal", requestId);
     }
   };

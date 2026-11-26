@@ -43,7 +43,7 @@ export function scrubString(value: string): string {
   return out;
 }
 
-function isSensitiveKey(key: string): boolean {
+export function isSensitiveKey(key: string): boolean {
   return SENSITIVE_KEY.test(key) || SENSITIVE_KEY_PART.test(key);
 }
 

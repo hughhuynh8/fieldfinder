@@ -34,6 +34,7 @@ These are rate-limit rules keyed on client IP, with a 60 s fixed window. The act
 | 4   | `api-admin`     | starts with `/api/admin/`     | 60                | One operator. The app adds per-credential limits on top.                                 |
 | 5   | `pages-detail`  | starts with `/venues/`        | 120               | Server-rendered venue and pitch pages: the same data as rule 2, in HTML. **New in 4.3.** |
 | 6   | `sitemap`       | `/sitemap.xml` (exact)        | 10                | Built per request from the database (PR 4.2). Crawlers fetch it rarely. **New in 4.3.**  |
+| 7   | `sentry-tunnel` | `/monitoring` (exact)         | 30                | Browser error reports (PR 4.4). Stops anyone using up the Sentry quota. **New in 4.5.**  |
 
 Rules 5 and 6 are the crawled pages. Googlebot treats a 429 as "slow down" and backs off. It doesn't drop pages for a brief 429, but sustained 429s reduce crawling. If the traffic view shows a **verified** crawler being limited, raise rule 5 first (see [Crawlers](#crawlers)).
 
@@ -77,6 +78,11 @@ vercel firewall rules add "sitemap" \
   --condition '{"type":"path","op":"eq","value":"/sitemap.xml"}' \
   --action rate_limit --rate-limit-window 60 --rate-limit-requests 10 --rate-limit-keys ip --rate-limit-action rate_limit --yes
 
+vercel firewall rules add "sentry-tunnel" \
+  --description "Sentry tunnel: 30 per minute per IP (docs/security/edge-rules.md)" \
+  --condition '{"type":"path","op":"eq","value":"/monitoring"}' \
+  --action rate_limit --rate-limit-window 60 --rate-limit-requests 30 --rate-limit-keys ip --rate-limit-action rate_limit --yes
+
 vercel firewall diff        # review the staged changes
 vercel firewall publish     # make them live (asks you to confirm the project name)
 ```
@@ -100,6 +106,8 @@ Once the rules are live, record exactly what was applied:
 vercel firewall rules list --json --expand > docs/security/edge-rules.export.json
 vercel firewall bot-management --json > docs/security/edge-rules.bot-management.json   # managed bot rules' current actions
 ```
+
+The export from 4.3 also lists four older rules with the same limits as rules 1–4 (`Admin children rate limit`, `Venues exact rate limit`, `Venues children rate limit`, `Locations children rate limit`). They duplicate rules 1–4, so delete them in the dashboard (Project → Firewall → Configure) and re-export (review-m4.md, L1).
 
 Read both files before committing. They should hold rule names, conditions and actions only, with no tokens or secrets. Commit them next to this file. Re-export after every change, so the repo always shows what's live.
 

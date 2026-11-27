@@ -1,0 +1,40 @@
+{
+  "ci": {
+    "collect": {
+      "startServerCommand": "pnpm start --port 3100",
+      "startServerReadyPattern": "Ready",
+      "url": [
+        "http://localhost:3100/",
+        "http://localhost:3100/venues/ironbark-park",
+        "http://localhost:3100/venues/ironbark-park/pitches/pitch-a",
+        "http://localhost:3100/venues/far-plains-oval"
+      ],
+      "numberOfRuns": 3,
+      "settings": {
+        "throttlingMethod": "devtools",
+        "onlyCategories": ["performance"],
+        "chromeFlags": "--headless=new --no-sandbox"
+      }
+    },
+    "assert": {
+      "assertMatrix": [
+        {
+          "matchingUrlPattern": "^http://localhost:3100/venues/",
+          "assertions": {
+            "largest-contentful-paint": ["error", { "maxNumericValue": 2500, "aggregationMethod": "median-run" }]
+          }
+        },
+        {
+          "matchingUrlPattern": "^http://localhost:3100/$",
+          "assertions": {
+            "resource-summary:script:size": ["error", { "maxNumericValue": 877000, "aggregationMethod": "median-run" }]
+          }
+        }
+      ]
+    },
+    "upload": {
+      "target": "filesystem",
+      "outputDir": ".lighthouseci/reports"
+    }
+  }
+}

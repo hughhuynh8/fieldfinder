@@ -31,7 +31,7 @@ For each client (an IPv4 address or an IPv6 /64, held only as a keyed hash), eac
    - `NEXT_PUBLIC_SENTRY_DSN`: the project's DSN. It isn't secret, but it's read at build time, so redeploy after setting it.
    - Optional, for readable stack traces: `SENTRY_ORG`, `SENTRY_PROJECT` and `SENTRY_AUTH_TOKEN`, an organisation token with the `project:releases` scope. The token is a secret: Vercel only, never the repo.
 4. Leave all four empty for local development and CI: Sentry is then off and the build is unchanged.
-5. Add an edge rule for the tunnel (proposed; apply with the others in `edge-rules.md`): `POST /monitoring`, 30 requests per 60 s per IP, action `rate_limit`. The tunnel only accepts our own DSN, but this stops anyone burning the Sentry quota.
+5. Add the edge rule for the tunnel (rule 7 in `edge-rules.md`, added in 4.5): `POST /monitoring`, 30 requests per 60 s per IP, action `rate_limit`. The tunnel only accepts our own DSN, but this stops anyone burning the Sentry quota.
 
 ## Alert rules
 

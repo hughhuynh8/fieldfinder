@@ -43,3 +43,6 @@ pnpm-debug.log*
 
 # codex-autofix workflow scratch (comments in, replies out)
 .codex-fix/
+
+# lighthouse ci (pnpm perf)
+.lighthouseci/

@@ -22,7 +22,9 @@ test.describe("smoke @smoke", () => {
     expect(headers["x-content-type-options"]).toBe("nosniff");
     expect(headers["referrer-policy"]).toBe("strict-origin-when-cross-origin");
     expect(headers["permissions-policy"]).toContain("geolocation=(self)");
-    expect(headers["content-security-policy-report-only"]).toContain("frame-ancestors 'none'");
+    expect(headers["content-security-policy"]).toContain("frame-ancestors 'none'");
+    // Enforced since PR 4.5, not report-only.
+    expect(headers["content-security-policy-report-only"]).toBeUndefined();
     expect(headers["x-powered-by"]).toBeUndefined();
   });
 });

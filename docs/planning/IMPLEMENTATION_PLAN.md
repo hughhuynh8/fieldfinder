@@ -54,6 +54,11 @@ Inputs reviewed: `docs/specifications/FIELDFINDER_SPEC.md` v1.0, `docs/design/RE
   - **Sentry's browser SDK loads lazily**, after load and idle, with early errors buffered.
   - **Lighthouse CI** (`@lhci/cli` 0.16.1, dev; `pnpm perf`; CI job `perf`) uses DevTools throttling. Budgets: detail-page LCP ≤ 2.5 s; `/` script transfer ≤ 877,000 B (measured + 10%).
   - Findings and details: `docs/security/review-m4.md`.
+- **Production provisioning (2026-11-27, PR 4.6; Hugh):**
+  - **Supabase:** a separate production project in Sydney on the **Free** plan for now. That overrides "Pro for production" (§5) until real data is entered. Free has no backups, so take a manual dump before each migration run until the upgrade.
+  - **Migrations:** `deploy.yml` applies them in one approved job: build → `supabase db push` (session pooler, secret `SUPABASE_DB_URL_MIGRATE` in the `production` environment only) → deploy. A failed build or migration deploys nothing. The seed is never pushed. No dump artifact is taken in CI, because the repo is public.
+  - **Domain:** no custom domain yet. Production is `fieldfinder-sooty.vercel.app` and `SITE_URL` stays unset.
+  - **Steps:** `docs/runbooks/production-setup.md`. Until its step 5, Vercel Production reads the staging database.
 - **Codex autofix (2026-11-11, Hugh chose a GitHub Action over a local skill):** `.github/workflows/codex-autofix.yml` runs Claude Code (`anthropics/claude-code-action`, pinned) when `chatgpt-codex-connector[bot]` reviews an open same-repo PR. Claude follows `.claude/procedures/codex-autofix.md`: it checks each comment against the code, spec and CLAUDE.md, fixes the valid ones with tests, runs `pnpm verify`, pushes one `fix(codex):` commit with the Claude GitHub App's token (so CI runs on it), and the workflow replies on every thread.
   - Limits: at most 3 fix rounds per PR; skipped if the branch moved after the review; no edits to workflows, `.claude/`, CLAUDE.md, migrations, dependencies or the spec (those become `needs_human` replies); no force-push or web access.
   - Needs Hugh: install the Claude GitHub App and add `CLAUDE_CODE_OAUTH_TOKEN` or `ANTHROPIC_API_KEY` as a repo secret. Merging still needs Hugh's review.

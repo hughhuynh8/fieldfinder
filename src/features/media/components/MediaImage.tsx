@@ -33,6 +33,9 @@ export function MediaImage({ src, alt, width, height, sizes, priority = false, c
       sizes={sizes}
       unoptimized
       priority={priority}
+      // The first gallery photo is usually the page's largest paint (LCP): fetch it ahead of scripts
+      // (PR 4.5). Next's preload for `priority` images carries this hint too.
+      fetchPriority={priority ? "high" : undefined}
       loading={priority ? undefined : "lazy"}
       onError={onError}
       className={className}

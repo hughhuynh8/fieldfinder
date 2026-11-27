@@ -6,8 +6,13 @@ const header = (key: string) => securityHeaders.find((h) => h.key === key)?.valu
 
 describe("securityHeaders", () => {
   it("forbids framing in both CSP and X-Frame-Options", () => {
-    expect(header("Content-Security-Policy-Report-Only")).toContain("frame-ancestors 'none'");
+    expect(header("Content-Security-Policy")).toContain("frame-ancestors 'none'");
     expect(header("X-Frame-Options")).toBe("DENY");
+  });
+
+  it("enforces the CSP rather than only reporting it (PR 4.5)", () => {
+    expect(header("Content-Security-Policy-Report-Only")).toBeUndefined();
+    expect(header("Content-Security-Policy")).toContain("object-src 'none'");
   });
 
   it("allows geolocation only for our own origin", () => {
@@ -19,7 +24,7 @@ describe("securityHeaders", () => {
   });
 
   it("blocks plugins and base-tag hijacking", () => {
-    const csp = header("Content-Security-Policy-Report-Only");
+    const csp = header("Content-Security-Policy");
     expect(csp).toContain("object-src 'none'");
     expect(csp).toContain("base-uri 'self'");
   });
@@ -27,7 +32,7 @@ describe("securityHeaders", () => {
   describe("images (PR 3.3)", () => {
     const imgSrc = (env: Record<string, string | undefined>) =>
       /img-src [^;]+/.exec(
-        buildSecurityHeaders(env).find((h) => h.key === "Content-Security-Policy-Report-Only")?.value ?? "",
+        buildSecurityHeaders(env).find((h) => h.key === "Content-Security-Policy")?.value ?? "",
       )?.[0];
 
     it("allows the media bucket's origin only, not its path", () => {
@@ -51,7 +56,7 @@ describe("securityHeaders", () => {
   });
 
   it("lets the map reach Mapbox and nothing else new (PR 3.4)", () => {
-    const csp = header("Content-Security-Policy-Report-Only") ?? "";
+    const csp = header("Content-Security-Policy") ?? "";
     expect(csp).toContain(
       "connect-src 'self' https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com ",
     );
@@ -60,7 +65,7 @@ describe("securityHeaders", () => {
   });
 
   it("lets gtag.js load from Google Tag Manager and send to GA4's hosts only (PR 4.1)", () => {
-    const csp = header("Content-Security-Policy-Report-Only") ?? "";
+    const csp = header("Content-Security-Policy") ?? "";
     expect(csp).toContain("script-src 'self' 'unsafe-inline' https://www.googletagmanager.com;");
     expect(csp).toMatch(
       /connect-src [^;]* https:\/\/\*\.google-analytics\.com https:\/\/\*\.analytics\.google\.com https:\/\/www\.googletagmanager\.com(;|$)/,
@@ -68,5 +73,24 @@ describe("securityHeaders", () => {
     // No wildcard Google domains, and nothing for scripts beyond the one loader host.
     expect(csp).not.toMatch(/\*\.google\.com|\*\.googleapis\.com/);
     expect(csp).not.toMatch(/script-src[^;]*google-analytics/);
+  });
+
+  describe("Vercel Toolbar (PR 4.5)", () => {
+    const cspFor = (env: Record<string, string | undefined>) =>
+      buildSecurityHeaders(env).find((h) => h.key === "Content-Security-Policy")?.value ?? "";
+
+    it("allows the toolbar's origins on preview builds", () => {
+      const csp = cspFor({ VERCEL_ENV: "preview" });
+      expect(csp).toMatch(/script-src [^;]*https:\/\/vercel\.live/);
+      expect(csp).toMatch(/connect-src [^;]*wss:\/\/ws-us3\.pusher\.com/);
+      expect(csp).toContain("frame-src https://vercel.live");
+    });
+
+    it.each([["production"], ["development"], [undefined]])("never allows them when VERCEL_ENV is %s", (env) => {
+      const csp = cspFor({ VERCEL_ENV: env });
+      expect(csp).not.toContain("vercel.live");
+      expect(csp).not.toContain("pusher.com");
+      expect(csp).not.toContain("frame-src");
+    });
   });
 });

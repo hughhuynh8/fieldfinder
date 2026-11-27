@@ -34,6 +34,8 @@
     "media:smoke": "node scripts/staging-media-smoke.ts",
     "security:smoke": "node scripts/security-smoke.ts",
     "check:client-bundle": "node scripts/check-client-bundle.ts",
+    "perf:setup": "node scripts/perf-setup.ts",
+    "perf": "lhci autorun",
     "openapi:generate": "OPENAPI_WRITE=1 vitest run --project unit src/lib/openapi/document.test.ts",
     "verify": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build"
   },
@@ -53,6 +55,7 @@
     "@asteasolutions/zod-to-openapi": "9.1.0",
     "@axe-core/playwright": "4.14.0",
     "@eslint/js": "9.39.5",
+    "@lhci/cli": "0.16.1",
     "@playwright/test": "1.64.1",
     "@tailwindcss/postcss": "4.3.3",
     "@testing-library/dom": "10.4.2",

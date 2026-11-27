@@ -1,11 +1,16 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
 
+import { LOCAL_MEDIA_PUBLIC_BASE_URL } from "../setup/integration-env.ts";
+
 // Results list (PR 3.3) at every agreed viewport. GET /api/venues is answered in the browser with
 // synthetic venues (invented names), so no database is needed.
 
 const SEARCH = "/?lat=-37.814&lng=144.963&place=Melbourne";
-// A 1×1 PNG, served for the one venue that has a photo.
+// The one venue with a photo uses the media origin the app is built with (playwright.config.ts): the
+// enforced CSP (PR 4.5) allows images from that origin only, as in production.
+const PHOTO_URL = `${LOCAL_MEDIA_PUBLIC_BASE_URL}/e2e/one.png`;
+// A 1×1 PNG, served for that photo.
 const PIXEL = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
   "base64",
@@ -32,7 +37,7 @@ function venue(n: number, extra: Record<string, unknown> = {}) {
 }
 
 async function mockSearch(page: Page, pages: { ids: number[]; next: string | null }[], total: number) {
-  await page.route("**/media.test/**", (route) => route.fulfill({ body: PIXEL, contentType: "image/png" }));
+  await page.route(PHOTO_URL, (route) => route.fulfill({ body: PIXEL, contentType: "image/png" }));
   await page.route("**/api/venues?**", async (route) => {
     const cursor = new URL(route.request().url()).searchParams.get("cursor");
     const p = pages[cursor === null ? 0 : Number(cursor.slice(1))] ?? { ids: [], next: null };
@@ -43,7 +48,7 @@ async function mockSearch(page: Page, pages: { ids: number[]; next: string | nul
           ? {
               image: {
                 id: "5eed0000-0000-4000-8000-0000000000aa",
-                url: "https://media.test/p/one.png",
+                url: PHOTO_URL,
                 contentType: "image/webp",
                 width: 400,
                 height: 300,

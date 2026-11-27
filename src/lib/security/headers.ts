@@ -1,6 +1,8 @@
 // Baseline security headers applied to every route (see next.config.ts).
-// CSP ships as Report-Only until the map and analytics origins are known (M3/M4), then switches to
-// enforcing with per-request nonces.
+// CSP is enforced (PR 4.5, Hugh's choice): the allowlist below blocks scripts from other origins,
+// framing, plugins and requests to hosts not listed. script-src still allows 'unsafe-inline' for
+// Next's inline bootstrap scripts; replacing it with per-request nonces is a follow-up, because
+// nonces make every page dynamic (docs/security/review-m4.md).
 //
 // Images (PR 3.3): venue photos come from the public media bucket, so its origin (scheme + host from
 // MEDIA_PUBLIC_BASE_URL, never the path) is allowed in img-src. A missing or malformed value adds
@@ -29,16 +31,35 @@ export function mediaOrigin(value: string | undefined): string | null {
   return new URL(trimmed).origin;
 }
 
-function contentSecurityPolicy(media: string | null): string {
+// Vercel Toolbar (PR 4.5): Vercel injects it into PREVIEW deployments only (comments, feedback). Its
+// origins are added when the build runs with VERCEL_ENV=preview, never for production or local
+// builds. Source: Vercel's toolbar CSP guidance.
+const TOOLBAR = {
+  script: "https://vercel.live",
+  style: "https://vercel.live",
+  img: "https://vercel.live https://vercel.com",
+  font: "https://vercel.live https://assets.vercel.com",
+  connect: "https://vercel.live wss://ws-us3.pusher.com",
+  frame: "https://vercel.live",
+};
+
+function contentSecurityPolicy(media: string | null, preview: boolean): string {
+  const toolbar = (key: keyof typeof TOOLBAR) => (preview ? TOOLBAR[key] : null);
+  const directive = (...parts: (string | null)[]) => parts.filter(Boolean).join(" ");
   return [
     "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' ${GA_SCRIPT}`,
-    "style-src 'self' 'unsafe-inline'",
-    ["img-src 'self' data: blob:", media, GA_IMG].filter(Boolean).join(" "),
-    "font-src 'self'",
-    `connect-src 'self' https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com ${GA_CONNECT}`,
+    directive("script-src 'self' 'unsafe-inline'", GA_SCRIPT, toolbar("script")),
+    directive("style-src 'self' 'unsafe-inline'", toolbar("style")),
+    directive("img-src 'self' data: blob:", media, GA_IMG, toolbar("img")),
+    directive("font-src 'self'", toolbar("font")),
+    directive(
+      "connect-src 'self' https://api.mapbox.com https://*.tiles.mapbox.com https://events.mapbox.com",
+      GA_CONNECT,
+      toolbar("connect"),
+    ),
     "worker-src 'self' blob:",
     "child-src blob:",
+    ...(preview ? [`frame-src ${TOOLBAR.frame}`] : []),
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",
@@ -51,8 +72,8 @@ export type SecurityHeader = { key: string; value: string };
 export function buildSecurityHeaders(env: Record<string, string | undefined> = process.env): SecurityHeader[] {
   return [
     {
-      key: "Content-Security-Policy-Report-Only",
-      value: contentSecurityPolicy(mediaOrigin(env.MEDIA_PUBLIC_BASE_URL)),
+      key: "Content-Security-Policy",
+      value: contentSecurityPolicy(mediaOrigin(env.MEDIA_PUBLIC_BASE_URL), env.VERCEL_ENV === "preview"),
     },
     { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
     { key: "X-Content-Type-Options", value: "nosniff" },

@@ -89,11 +89,14 @@ jobs:
       - run: pnpm db:start -x gotrue,realtime,imgproxy,mailpit,postgrest,postgres-meta,studio,edge-runtime,logflare,vector,supavisor
       # The fake map and a fake GA4 id (PR 4.1: the consent banner and analytics code run, nothing is
       # sent to Google) are baked in at build time (NEXT_PUBLIC_*); the server's database and media
-      # URLs are the local ones, set by playwright.config.ts when it starts the app.
+      # URLs are the local ones, set by playwright.config.ts when it starts the app. The media origin is
+      # also needed at build time: next.config.ts bakes it into the enforced CSP's img-src (PR 4.5), and
+      # without it every photo is blocked.
       - run: pnpm build
         env:
           NEXT_PUBLIC_MAP_ADAPTER: fake
           NEXT_PUBLIC_GA_MEASUREMENT_ID: G-E2ETEST000
+          MEDIA_PUBLIC_BASE_URL: http://127.0.0.1:54321/storage/v1/object/public/media-public
       - run: pnpm e2e
         env:
           E2E_DB: "1"

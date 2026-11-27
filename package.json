@@ -42,7 +42,7 @@
   "dependencies": {
     "@sentry/nextjs": "11.11.0",
     "aws4fetch": "1.0.20",
-    "mapbox-gl": "3.34.1",
+    "mapbox-gl": "3.34.2",
     "next": "16.4.5",
     "postgres": "3.4.9",
     "react": "19.3.1",

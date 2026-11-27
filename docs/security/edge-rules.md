@@ -92,11 +92,11 @@ The same rules can be entered in the dashboard (Project → Firewall → Configu
 ### Check after publishing
 
 ```sh
-HOST=fieldfinder.vercel.app   # replace with the production host (Project → Domains)
+HOST=fieldfinder-sooty.vercel.app   # the production host until the custom domain (4.6); fieldfinder.vercel.app is not this project
 for i in $(seq 1 15); do curl -sS -o /dev/null -w "%{http_code}\n" "https://$HOST/sitemap.xml"; done | sort | uniq -c
 ```
 
-Expect 10 × `200`, then 5 × `429`. `000` means curl never got a response (a wrong host, DNS or the network), not a Firewall result; `-S` prints the reason. 15 × `200` means the rule isn't live (check `vercel firewall diff`). The sitemap is the cheapest limited route: two small queries, and no Mapbox call. A minute later it answers `200` again.
+Expect 10 × `200`, then 5 × `429`. `000` means curl never got a response (a wrong host, DNS or the network), not a Firewall result; `-S` prints the reason. 15 × `200` means the rule isn't live (check `vercel firewall diff`). `500`s before the `429`s come from the app, not the Firewall: usually a deployment built without the database env (`DATABASE_URL_PUBLIC_READER`), since the sitemap is built per request. Redeploy and check Sentry. The sitemap is the cheapest limited route: two small queries, and no Mapbox call. A minute later it answers `200` again.
 
 ## Export (committed evidence)
 

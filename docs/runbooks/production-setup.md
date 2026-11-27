@@ -106,7 +106,11 @@ Then:
 
 ## 8. Before launch (still open)
 
-- [ ] **Supabase Pro** before real data, so there are daily backups. On Free, take a manual dump before every migration run: `pnpm exec supabase db dump --db-url "$DATABASE_URL_OPERATOR" -f <outside the repo>`. Keep it in encrypted storage, never in git or a CI artifact.
+- [ ] **Supabase Pro** before real data, so there are daily backups. On Free, take a manual backup before every migration run. The default `db dump` is schema only (no data, no custom roles), so take all three, each to a file outside the repo:
+  - roles: `pnpm exec supabase db dump --db-url "$DATABASE_URL_OPERATOR" --role-only -f <dir>/roles.sql`
+  - schema: `pnpm exec supabase db dump --db-url "$DATABASE_URL_OPERATOR" -f <dir>/schema.sql`
+  - data: `pnpm exec supabase db dump --db-url "$DATABASE_URL_OPERATOR" --data-only --use-copy -f <dir>/data.sql`
+  - Restore in that order (roles, schema, data). The data file holds admin credential hashes and audit history, so keep all three in encrypted storage, never in git or a CI artifact.
 - [ ] `/privacy` and `/terms`: replace `[operator name]` and `[contact email]`, and have the wording reviewed (P5).
 - [ ] Custom domain: DNS, `SITE_URL`, the Mapbox token's URL restriction, and the HSTS `preload` decision (review-m4.md, L4).
 - [ ] Bot Protection from `log` to `challenge` after a week of clean logs (`edge-rules.md`).
